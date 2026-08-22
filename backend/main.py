@@ -19,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from pronunciation_engine import score_pronunciation
 from schemas import HealthResponse, PronunciationScoreResponse, TranscribeResponse
-from services.pashto_asr import transcribe_audio as ghag_transcribe, _load_model as _load_asr_model
+from services.pashto_asr import transcribe_audio as ghag_transcribe, _load_pipeline as _load_asr_model
 
 load_dotenv()
 
