@@ -1,25 +1,124 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-html,
-body {
-  height: 100%;
-}
+html, body { height: 100%; }
 
 body {
-  background: linear-gradient(180deg, #f0fdf6 0%, #ffffff 40%);
+  background-color: #0a0f1e;
+  color: #e2e8f0;
 }
 
-@keyframes pulse-ring {
-  0% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45);
+/* ── Glassmorphism card ── */
+@layer components {
+  .glass-card {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
-  100% {
-    box-shadow: 0 0 0 18px rgba(16, 185, 129, 0);
+
+  .glass-card-hover {
+    transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+  }
+  .glass-card-hover:hover {
+    background: rgba(255, 255, 255, 0.09);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary {
+    @apply bg-brand-500 hover:bg-brand-600 active:scale-95 text-white font-semibold
+           rounded-2xl px-8 py-3 transition-all duration-150 shadow-glow;
+  }
+
+  .nav-item {
+    @apply flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-400
+           hover:text-white hover:bg-white/10 transition-all duration-150 cursor-pointer text-sm font-medium;
+  }
+  .nav-item.active {
+    @apply text-white bg-white/10 border border-white/15;
   }
 }
 
-.recording-pulse {
-  animation: pulse-ring 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+/* ── Pashto word glow ── */
+.pashto-glow {
+  text-shadow: 0 0 40px rgba(16, 185, 129, 0.4);
+}
+
+/* ── XP bar animation ── */
+@keyframes xp-fill {
+  from { width: 0; }
+}
+.xp-bar { animation: xp-fill 0.8s ease-out; }
+
+/* ── Pulse for streak ── */
+@keyframes streak-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.7; }
+}
+.streak-pulse { animation: streak-pulse 2s ease-in-out infinite; }
+
+/* ── Fade-in for card transitions ── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fade-up 0.35s ease-out; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+
+/* ── Practice: answer option buttons ── */
+@layer components {
+  .answer-option {
+    @apply w-full rounded-2xl px-4 py-3 text-sm font-semibold text-slate-200
+           border border-white/10 bg-white/5
+           hover:bg-white/10 hover:border-white/20 hover:text-white
+           active:scale-95 transition-all duration-150 cursor-pointer;
+  }
+  .answer-option.correct {
+    @apply bg-green-500/20 border-green-500/60 text-green-300;
+  }
+  .answer-option.incorrect {
+    @apply bg-red-500/20 border-red-500/60 text-red-300;
+  }
+  .answer-option.dimmed {
+    @apply opacity-40 cursor-default;
+  }
+}
+
+/* ── XP pop animation ── */
+@keyframes xp-pop {
+  0%   { opacity: 0; transform: translateY(0) scale(0.8); }
+  40%  { opacity: 1; transform: translateY(-12px) scale(1.2); }
+  100% { opacity: 0; transform: translateY(-24px) scale(1); }
+}
+.xp-pop { animation: xp-pop 0.9s ease-out forwards; }
+
+/* ── Shake for wrong match ── */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-6px); }
+  40%      { transform: translateX(6px); }
+  60%      { transform: translateX(-4px); }
+  80%      { transform: translateX(4px); }
+}
+.shake { animation: shake 0.4s ease-in-out; }
+
+/* ── Speed round flash overlays ── */
+.correct-flash { animation: correct-flash 0.2s ease-out; }
+.wrong-flash   { animation: wrong-flash 0.2s ease-out; }
+@keyframes correct-flash {
+  0%   { background-color: rgba(16,185,129,0.08); }
+  100% { background-color: transparent; }
+}
+@keyframes wrong-flash {
+  0%   { background-color: rgba(239,68,68,0.08); }
+  100% { background-color: transparent; }
 }

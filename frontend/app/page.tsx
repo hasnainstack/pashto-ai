@@ -2,47 +2,218 @@
 
 import { useEffect, useState } from "react";
 import Flashcard from "@/components/Flashcard";
-import StreakDisplay from "@/components/StreakDisplay";
 import VocabInput from "@/components/VocabInput";
+import PracticePage from "@/components/PracticePage";
 import { VOCABULARY } from "@/lib/vocabulary";
 import { getBestStreak, getStreak } from "@/lib/streak";
+import { getXP, getLevel, markLearned } from "@/lib/xp";
+
+const DAILY_GOAL = 10;
+type Section = "learn" | "practice";
+
+const NAV_ITEMS: { icon: string; label: string; id: Section }[] = [
+  { icon: "📖", label: "Learn", id: "learn" },
+  { icon: "🎯", label: "Practice", id: "practice" },
+];
 
 export default function HomePage() {
+  const [section, setSection] = useState<Section>("learn");
   const [wordIndex, setWordIndex] = useState(0);
   const [streak, setStreak] = useState(0);
   const [best, setBest] = useState(0);
+  const [xp, setXp] = useState(0);
+  const [level, setLevel] = useState(1);
+  const [dailyCount, setDailyCount] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     setStreak(getStreak());
     setBest(getBestStreak());
+    setXp(getXP());
+    setLevel(getLevel());
+    const saved = parseInt(sessionStorage.getItem("pp_daily") || "0", 10);
+    setDailyCount(saved);
   }, []);
+
+  // Refresh header stats when switching back to learn
+  useEffect(() => {
+    setStreak(getStreak());
+    setXp(getXP());
+    setLevel(getLevel());
+  }, [section]);
 
   const currentWord = VOCABULARY[wordIndex % VOCABULARY.length];
 
+  const handleNext = () => {
+    // Mark the current word as learned
+    markLearned([currentWord.id]);
+    setWordIndex((i) => i + 1);
+    setDailyCount((c) => {
+      const next = c + 1;
+      sessionStorage.setItem("pp_daily", String(next));
+      return next;
+    });
+  };
+
+  const xpPercent = Math.min((wordIndex % 20) / 20 * 100, 100);
+  const dailyPercent = Math.min((dailyCount / DAILY_GOAL) * 100, 100);
+
   return (
-    <main className="flex min-h-screen flex-col items-center px-4 py-10">
-      <header className="mb-10 flex w-full max-w-md items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">PashtoPro</h1>
-          <p className="text-sm text-slate-400">Learn Pashto, one word at a time</p>
+    <div className="min-h-screen flex flex-col">
+
+      {/* ── TOP HEADER ── */}
+      <header className="glass-card border-b border-white/10 px-4 md:px-8 py-3 flex items-center justify-between sticky top-0 z-30">
+        <div className="flex items-center gap-3">
+          <button
+            className="md:hidden text-slate-400 hover:text-white p-1"
+            onClick={() => setSidebarOpen((o) => !o)}
+            aria-label="Toggle menu"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-brand-500 flex items-center justify-center text-white font-bold text-sm shadow-glow">
+              پ
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-white leading-none">PashtoPro</h1>
+              <p className="text-xs text-slate-500 hidden sm:block">Learn Pashto, one word at a time</p>
+            </div>
+          </div>
         </div>
-        <StreakDisplay streak={streak} best={best} />
+
+        <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1.5 glass-card rounded-full px-3 py-1.5 streak-pulse">
+            <span className="text-base">🔥</span>
+            <span className="text-orange-400 font-bold text-sm">{streak}</span>
+            <span className="text-slate-500 text-xs hidden sm:inline">streak</span>
+          </div>
+          <div className="flex items-center gap-1.5 glass-card rounded-full px-3 py-1.5">
+            <span className="text-base">⭐</span>
+            <span className="text-yellow-400 font-bold text-sm">{xp}</span>
+            <span className="text-slate-500 text-xs hidden sm:inline">XP</span>
+          </div>
+          <div className="flex items-center gap-1.5 glass-card rounded-full px-3 py-1.5">
+            <span className="text-brand-400 font-bold text-sm">Lv.{level}</span>
+          </div>
+        </div>
       </header>
 
-      <Flashcard
-        key={currentWord.id}
-        word={currentWord}
-        onNext={() => setWordIndex((i) => i + 1)}
-      />
+      <div className="flex flex-1 overflow-hidden">
 
-      <p className="mt-6 text-sm text-slate-400">Word {wordIndex + 1}</p>
+        {/* ── SIDEBAR ── */}
+        <aside className={`
+          fixed md:static inset-y-0 left-0 z-20 w-64 flex flex-col gap-4 p-4
+          glass-card border-r border-white/10 md:border-0
+          transform transition-transform duration-300
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+          top-[53px] md:top-0
+        `}>
+          <nav className="flex flex-col gap-1 mt-2">
+            {NAV_ITEMS.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => { setSection(item.id); setSidebarOpen(false); }}
+                className={`nav-item ${section === item.id ? "active" : ""}`}
+              >
+                <span className="text-base">{item.icon}</span>
+                <span>{item.label}</span>
+                {section === item.id && (
+                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-brand-400" />
+                )}
+              </button>
+            ))}
+          </nav>
 
-      <section className="mt-10 flex flex-col items-center gap-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-          Look up a word
-        </p>
-        <VocabInput />
-      </section>
-    </main>
+          <div className="border-t border-white/10" />
+
+          <div className="glass-card rounded-2xl p-4 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Your Progress</span>
+              <span className="text-xs text-brand-400 font-bold">Level {level}</span>
+            </div>
+            <div>
+              <div className="flex justify-between text-xs text-slate-500 mb-1">
+                <span>XP</span>
+                <span>{xp % 100} / 100</span>
+              </div>
+              <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-400 xp-bar transition-all duration-500"
+                  style={{ width: `${xpPercent}%` }}
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🌱</span>
+              <div>
+                <p className="text-xs font-semibold text-white">Beginner</p>
+                <p className="text-xs text-slate-500">Keep going!</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="glass-card rounded-2xl p-4 text-center">
+            <p className="text-3xl font-bold text-white">{wordIndex}</p>
+            <p className="text-xs text-slate-400 mt-1">words learned</p>
+            <p className="text-xs text-brand-400 mt-1">of {VOCABULARY.length} total</p>
+          </div>
+        </aside>
+
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-10 bg-black/50 md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* ── MAIN CONTENT ── */}
+        <main className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
+          {section === "learn" ? (
+            <div className="max-w-lg mx-auto flex flex-col gap-6">
+              <Flashcard
+                key={currentWord.id}
+                word={currentWord}
+                wordIndex={wordIndex}
+                total={VOCABULARY.length}
+                onNext={handleNext}
+              />
+
+              <div className="glass-card rounded-2xl p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🎯</span>
+                    <span className="text-sm font-semibold text-white">Daily Goal</span>
+                  </div>
+                  <span className="text-xs text-slate-400">{dailyCount} / {DAILY_GOAL} words</span>
+                </div>
+                <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-orange-500 to-yellow-400 transition-all duration-500"
+                    style={{ width: `${dailyPercent}%` }}
+                  />
+                </div>
+                {dailyCount >= DAILY_GOAL && (
+                  <p className="text-xs text-brand-400 mt-2 text-center font-semibold">
+                    🎉 Daily goal complete!
+                  </p>
+                )}
+              </div>
+
+              <div className="glass-card rounded-2xl p-5">
+                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">
+                  🔍 Look up a word
+                </p>
+                <VocabInput />
+              </div>
+            </div>
+          ) : (
+            <PracticePage onBackToLearn={() => setSection("learn")} />
+          )}
+        </main>
+      </div>
+    </div>
   );
 }
