@@ -31,6 +31,36 @@ export async function scorePronunciation(
   return res.json();
 }
 
+export async function translateToEnglish(text: string): Promise<string> {
+  const formData = new FormData();
+  formData.append("text", text);
+  const res = await fetch(`${API_URL}/api/translate-to-english`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Translation failed (${res.status})`);
+  }
+  const data = await res.json();
+  return data.english as string;
+}
+
+export async function transliterateRoman(text: string): Promise<string> {
+  const formData = new FormData();
+  formData.append("text", text);
+  const res = await fetch(`${API_URL}/api/transliterate`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Translation failed (${res.status})`);
+  }
+  const data = await res.json();
+  return data.pashto as string;
+}
+
 export async function transcribeAudio(audioBlob: Blob): Promise<string> {
   const formData = new FormData();
   formData.append("audio", audioBlob, "recording.webm");

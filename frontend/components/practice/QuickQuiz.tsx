@@ -77,11 +77,11 @@ export default function QuickQuiz({ onComplete, onBack }: Props) {
         <button onClick={onBack} className="text-slate-400 hover:text-white text-sm">← Back</button>
         <div className="flex gap-1">
           {Array.from({ length: 3 }).map((_, i) => (
-            <span key={i} className={`text-xl ${i < lives ? "opacity-100" : "opacity-20"}`}>❤️</span>
+            <span key={i} className={`text-sm font-bold ${i < lives ? "text-red-400" : "text-slate-700"}`}>&#9829;</span>
           ))}
         </div>
         <div className="flex items-center gap-1.5 glass-card rounded-full px-3 py-1">
-          <span className="text-yellow-400 text-sm font-bold">⭐ {xpEarned} XP</span>
+          <span className="text-yellow-400 text-sm font-bold">{xpEarned} XP</span>
         </div>
       </div>
 
@@ -137,7 +137,7 @@ export default function QuickQuiz({ onComplete, onBack }: Props) {
         {/* Feedback */}
         {isAnswered && (
           <div className={`rounded-2xl p-3 text-center text-sm font-semibold ${isCorrect ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
-            {isCorrect ? "🎉 Correct!" : `❌ Correct answer: ${q.word.english}`}
+            {isCorrect ? "Correct!" : `Correct answer: ${q.word.english}`}
           </div>
         )}
 

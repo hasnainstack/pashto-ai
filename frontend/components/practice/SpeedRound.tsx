@@ -95,7 +95,6 @@ export default function SpeedRound({ onBack }: Props) {
       <div className="max-w-lg mx-auto flex flex-col items-center gap-6 fade-up">
         <button onClick={onBack} className="self-start text-slate-400 hover:text-white text-sm">← Back</button>
         <div className="glass-card rounded-3xl p-10 text-center flex flex-col gap-5">
-          <div className="text-5xl">⚡</div>
           <h2 className="text-3xl font-bold text-white">SPEED ROUND</h2>
           <p className="text-slate-400">Answer as many questions as possible in 60 seconds. Build combos for bonus points!</p>
           <div className="grid grid-cols-3 gap-3 text-center">
@@ -113,7 +112,6 @@ export default function SpeedRound({ onBack }: Props) {
     return (
       <div className="max-w-lg mx-auto flex flex-col items-center gap-6 fade-up">
         <div className="glass-card rounded-3xl p-8 text-center flex flex-col gap-4 w-full">
-          <div className="text-5xl">⏱️</div>
           <h2 className="text-3xl font-bold text-white">TIME&apos;S UP!</h2>
           <div className="grid grid-cols-2 gap-3">
             <StatBox label="Score" value={String(score)} accent="text-yellow-400" />
@@ -148,7 +146,7 @@ export default function SpeedRound({ onBack }: Props) {
           </p>
         </div>
         <div className="glass-card rounded-2xl p-3 text-center">
-          <p className="text-xs text-slate-500 mb-1">🔥 COMBO</p>
+          <p className="text-xs text-slate-500 mb-1">COMBO</p>
           <p className={`text-2xl font-bold ${combo > 0 ? "text-orange-400" : "text-slate-600"}`}>
             x{combo}
           </p>
@@ -169,7 +167,7 @@ export default function SpeedRound({ onBack }: Props) {
 
       {/* Question */}
       <div className="glass-card rounded-3xl p-6 flex flex-col gap-4">
-        <p className="text-xs font-semibold uppercase tracking-widest text-orange-400 text-center">⚡ SPEED ROUND</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-orange-400 text-center">SPEED ROUND</p>
         <p className="text-slate-300 text-center text-sm">What does this mean?</p>
         <div className="text-center">
           <h2

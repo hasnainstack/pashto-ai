@@ -23,7 +23,6 @@ export default function MistakeReview({ mistakeIds, onPracticeAgain, onBack }: P
 
       {words.length === 0 ? (
         <div className="glass-card rounded-3xl p-10 text-center">
-          <div className="text-4xl mb-3">🎉</div>
           <p className="text-white font-bold text-lg">No mistakes to review!</p>
           <p className="text-slate-400 text-sm mt-1">You&apos;re doing great.</p>
         </div>

@@ -4,21 +4,29 @@ import { useEffect, useState } from "react";
 import Flashcard from "@/components/Flashcard";
 import VocabInput from "@/components/VocabInput";
 import PracticePage from "@/components/PracticePage";
-import { VOCABULARY } from "@/lib/vocabulary";
+import TranslatorPage from "@/components/TranslatorPage";
+import PashtoToEnglishPage from "@/components/PashtoToEnglishPage";
+import { fetchGeneratedVocab, VOCABULARY } from "@/lib/vocabulary";
 import { getBestStreak, getStreak } from "@/lib/streak";
 import { getXP, getLevel, markLearned } from "@/lib/xp";
 
 const DAILY_GOAL = 10;
-type Section = "learn" | "practice";
+type Section = "learn" | "practice" | "translate" | "pashto-to-english";
 
-const NAV_ITEMS: { icon: string; label: string; id: Section }[] = [
-  { icon: "📖", label: "Learn", id: "learn" },
-  { icon: "🎯", label: "Practice", id: "practice" },
+const NAV_ITEMS: { label: string; id: Section }[] = [
+  { label: "Learn", id: "learn" },
+  { label: "Practice", id: "practice" },
+  { label: "Roman → Pashto", id: "translate" },
+  { label: "Pashto → English", id: "pashto-to-english" },
 ];
 
 export default function HomePage() {
   const [section, setSection] = useState<Section>("learn");
   const [wordIndex, setWordIndex] = useState(0);
+  const [wordList, setWordList] = useState(VOCABULARY);
+  const [genTopic, setGenTopic] = useState("");
+  const [genLoading, setGenLoading] = useState(false);
+  const [genError, setGenError] = useState("");
   const [streak, setStreak] = useState(0);
   const [best, setBest] = useState(0);
   const [xp, setXp] = useState(0);
@@ -42,10 +50,9 @@ export default function HomePage() {
     setLevel(getLevel());
   }, [section]);
 
-  const currentWord = VOCABULARY[wordIndex % VOCABULARY.length];
+  const currentWord = wordList[wordIndex % wordList.length];
 
   const handleNext = () => {
-    // Mark the current word as learned
     markLearned([currentWord.id]);
     setWordIndex((i) => i + 1);
     setDailyCount((c) => {
@@ -53,6 +60,21 @@ export default function HomePage() {
       sessionStorage.setItem("pp_daily", String(next));
       return next;
     });
+  };
+
+  const handleGenerate = async () => {
+    if (!genTopic.trim()) return;
+    setGenLoading(true);
+    setGenError("");
+    try {
+      const words = await fetchGeneratedVocab(genTopic.trim(), 10);
+      setWordList((prev) => [...prev, ...words]);
+      setGenTopic("");
+    } catch (e) {
+      setGenError(`Generation failed: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setGenLoading(false);
+    }
   };
 
   const xpPercent = Math.min((wordIndex % 20) / 20 * 100, 100);
@@ -74,11 +96,12 @@ export default function HomePage() {
             </svg>
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-brand-500 flex items-center justify-center text-white font-bold text-sm shadow-glow">
-              پ
+            <div className="w-9 h-9 rounded-xl bg-brand-500 flex items-center justify-center text-white font-bold shadow-glow"
+              style={{ fontFamily: "'Noto Nastaliq Urdu', serif", fontSize: "1.2rem" }}>
+              ژ
             </div>
             <div>
-              <h1 className="text-base font-bold text-white leading-none">PashtoPro</h1>
+              <h1 className="text-base font-bold text-white leading-none">ژبه</h1>
               <p className="text-xs text-slate-500 hidden sm:block">Learn Pashto, one word at a time</p>
             </div>
           </div>
@@ -86,14 +109,11 @@ export default function HomePage() {
 
         <div className="flex items-center gap-2 sm:gap-4">
           <div className="flex items-center gap-1.5 glass-card rounded-full px-3 py-1.5 streak-pulse">
-            <span className="text-base">🔥</span>
             <span className="text-orange-400 font-bold text-sm">{streak}</span>
             <span className="text-slate-500 text-xs hidden sm:inline">streak</span>
           </div>
           <div className="flex items-center gap-1.5 glass-card rounded-full px-3 py-1.5">
-            <span className="text-base">⭐</span>
-            <span className="text-yellow-400 font-bold text-sm">{xp}</span>
-            <span className="text-slate-500 text-xs hidden sm:inline">XP</span>
+            <span className="text-yellow-400 font-bold text-sm">{xp} XP</span>
           </div>
           <div className="flex items-center gap-1.5 glass-card rounded-full px-3 py-1.5">
             <span className="text-brand-400 font-bold text-sm">Lv.{level}</span>
@@ -118,7 +138,6 @@ export default function HomePage() {
                 onClick={() => { setSection(item.id); setSidebarOpen(false); }}
                 className={`nav-item ${section === item.id ? "active" : ""}`}
               >
-                <span className="text-base">{item.icon}</span>
                 <span>{item.label}</span>
                 {section === item.id && (
                   <span className="ml-auto w-1.5 h-1.5 rounded-full bg-brand-400" />
@@ -147,7 +166,6 @@ export default function HomePage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-lg">🌱</span>
               <div>
                 <p className="text-xs font-semibold text-white">Beginner</p>
                 <p className="text-xs text-slate-500">Keep going!</p>
@@ -158,7 +176,7 @@ export default function HomePage() {
           <div className="glass-card rounded-2xl p-4 text-center">
             <p className="text-3xl font-bold text-white">{wordIndex}</p>
             <p className="text-xs text-slate-400 mt-1">words learned</p>
-            <p className="text-xs text-brand-400 mt-1">of {VOCABULARY.length} total</p>
+            <p className="text-xs text-brand-400 mt-1">of {wordList.length} total</p>
           </div>
         </aside>
 
@@ -177,14 +195,13 @@ export default function HomePage() {
                 key={currentWord.id}
                 word={currentWord}
                 wordIndex={wordIndex}
-                total={VOCABULARY.length}
+                total={wordList.length}
                 onNext={handleNext}
               />
 
               <div className="glass-card rounded-2xl p-5">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">🎯</span>
                     <span className="text-sm font-semibold text-white">Daily Goal</span>
                   </div>
                   <span className="text-xs text-slate-400">{dailyCount} / {DAILY_GOAL} words</span>
@@ -197,18 +214,51 @@ export default function HomePage() {
                 </div>
                 {dailyCount >= DAILY_GOAL && (
                   <p className="text-xs text-brand-400 mt-2 text-center font-semibold">
-                    🎉 Daily goal complete!
+                    Daily goal complete!
                   </p>
                 )}
               </div>
 
               <div className="glass-card rounded-2xl p-5">
                 <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">
-                  🔍 Look up a word
+                  Search & Translate
                 </p>
                 <VocabInput />
               </div>
+
+              <div className="glass-card rounded-2xl p-5">
+                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">
+                  Generate words with AI
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={genTopic}
+                    onChange={(e) => setGenTopic(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
+                    placeholder="Topic (e.g. animals, food, travel)"
+                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-400"
+                  />
+                  <button
+                    onClick={handleGenerate}
+                    disabled={genLoading || !genTopic.trim()}
+                    className="btn-primary px-4 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {genLoading ? "..." : "Go"}
+                  </button>
+                </div>
+                {genError && <p className="text-xs text-red-400 mt-2">{genError}</p>}
+                {!genError && wordList.length > VOCABULARY.length && (
+                  <p className="text-xs text-brand-400 mt-2">
+                    +{wordList.length - VOCABULARY.length} AI words added to your queue
+                  </p>
+                )}
+              </div>
             </div>
+          ) : section === "translate" ? (
+            <TranslatorPage />
+          ) : section === "pashto-to-english" ? (
+            <PashtoToEnglishPage />
           ) : (
             <PracticePage onBackToLearn={() => setSection("learn")} />
           )}

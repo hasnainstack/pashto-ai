@@ -3,6 +3,25 @@
 from pydantic import BaseModel, Field
 
 
+class TransliterateResponse(BaseModel):
+    pashto: str = Field(..., description="Pashto script output")
+
+
+class TranslateToEnglishResponse(BaseModel):
+    english: str = Field(..., description="English translation")
+
+
+class VocabWord(BaseModel):
+    pashto: str
+    transliteration: str
+    english: str
+
+
+class VocabGenerateResponse(BaseModel):
+    topic: str
+    words: list[VocabWord]
+
+
 class PronunciationScoreResponse(BaseModel):
     """Response returned by POST /api/score-pronunciation"""
 

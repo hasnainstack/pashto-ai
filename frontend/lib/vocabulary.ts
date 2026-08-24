@@ -5,6 +5,22 @@ export interface VocabWord {
   english: string;
 }
 
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+export async function fetchGeneratedVocab(
+  topic: string,
+  count = 10
+): Promise<VocabWord[]> {
+  const res = await fetch(
+    `${API}/api/vocabulary/generate?topic=${encodeURIComponent(topic)}&count=${count}`
+  );
+  if (!res.ok) throw new Error(await res.text());
+  const data = await res.json();
+  return (data.words as { pashto: string; transliteration: string; english: string }[]).map(
+    (w, i) => ({ id: `gen_${Date.now()}_${i}`, ...w })
+  );
+}
+
 export const VOCABULARY: VocabWord[] = [
   { id: "w1", pashto: "او", transliteration: "Aw", english: "And" },
   { id: "w2", pashto: "اوبه", transliteration: "Owbeh", english: "Water" },

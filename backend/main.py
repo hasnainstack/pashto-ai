@@ -18,8 +18,10 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from pronunciation_engine import score_pronunciation
-from schemas import HealthResponse, PronunciationScoreResponse, TranscribeResponse
+from schemas import HealthResponse, PronunciationScoreResponse, TranscribeResponse, TransliterateResponse, TranslateToEnglishResponse, VocabGenerateResponse
 from services.pashto_asr import transcribe_audio as ghag_transcribe, _load_pipeline as _load_asr_model
+from services.groq_vocab import generate_vocab
+from services.transliterate import roman_to_pashto, pashto_to_english
 
 load_dotenv()
 
@@ -68,8 +70,53 @@ MAX_AUDIO_BYTES = 10 * 1024 * 1024  # 10MB
 def health_check() -> HealthResponse:
     return HealthResponse(
         status="ok",
-        whisper_configured=bool(os.environ.get("OPENAI_API_KEY")),
+        whisper_configured=bool(os.environ.get("GROQ_API_KEY")),
     )
+
+
+@app.get("/api/vocabulary/generate", response_model=VocabGenerateResponse)
+def vocabulary_generate(
+    topic: str = "common words",
+    count: int = 10,
+) -> VocabGenerateResponse:
+    """Generate Pashto vocabulary for a given topic using Groq."""
+    if count < 1 or count > 50:
+        raise HTTPException(status_code=400, detail="count must be between 1 and 50")
+    try:
+        words = generate_vocab(topic, count)
+        return VocabGenerateResponse(topic=topic, words=words)
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Generation failed: {e}")
+
+
+@app.post("/api/transliterate", response_model=TransliterateResponse)
+def transliterate_endpoint(text: str = Form(...)) -> TransliterateResponse:
+    """Convert Roman/Latin Pashto transliteration to Pashto script."""
+    if not text.strip():
+        raise HTTPException(status_code=400, detail="text must not be empty")
+    try:
+        pashto = roman_to_pashto(text.strip())
+        return TransliterateResponse(pashto=pashto)
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Translation failed: {e}")
+
+
+@app.post("/api/translate-to-english", response_model=TranslateToEnglishResponse)
+def translate_to_english_endpoint(text: str = Form(...)) -> TranslateToEnglishResponse:
+    """Translate Pashto script or Roman Pashto to English."""
+    if not text.strip():
+        raise HTTPException(status_code=400, detail="text must not be empty")
+    try:
+        english = pashto_to_english(text.strip())
+        return TranslateToEnglishResponse(english=english)
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Translation failed: {e}")
 
 
 @app.post("/api/transcribe", response_model=TranscribeResponse)

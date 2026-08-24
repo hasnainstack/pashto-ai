@@ -1,70 +1,53 @@
 """
 Pronunciation Engine
 ---------------------
-Implements the Phase 1 scoring pipeline described in the architecture doc:
-
-1. Transcribe the user's recorded audio with OpenAI Whisper, constrained to
-   Pashto (language="ps") to improve accuracy for this low-resource language.
-2. Compare the transcription against the target word using difflib's
-   SequenceMatcher to produce a 0-100 similarity score.
-3. Generate simple heuristic feedback from the score.
+Transcribes audio via Groq's whisper-large-v3 endpoint (fast, free tier),
+then scores similarity against the target word using difflib.
 """
 
 import difflib
 import os
 
-from openai import OpenAI
+from groq import Groq
 
-# Thresholds used for feedback generation and streak gamification.
 PASS_THRESHOLD = 80.0
 PERFECT_THRESHOLD = 90.0
 RETRY_THRESHOLD = 70.0
 
-_client: OpenAI | None = None
+_client: Groq | None = None
 
 
-def get_openai_client() -> OpenAI:
-    """Lazily instantiate the OpenAI client so import-time doesn't require a key."""
+def get_groq_client() -> Groq:
     global _client
     if _client is None:
-        api_key = os.environ.get("OPENAI_API_KEY")
+        api_key = os.environ.get("GROQ_API_KEY")
         if not api_key:
             raise RuntimeError(
-                "OPENAI_API_KEY is not set. Add it to backend/.env (see .env.example)."
+                "GROQ_API_KEY is not set. Add it to backend/.env (see .env.example)."
             )
-        _client = OpenAI(api_key=api_key)
+        _client = Groq(api_key=api_key)
     return _client
 
 
 def transcribe_audio(file_path: str, language: str = "ps") -> str:
-    """
-    Send the audio file to OpenAI's Whisper API for transcription.
-
-    language="ps" forces Pashto context, which materially improves
-    transcription accuracy for this low-resource language versus letting
-    Whisper auto-detect the language.
-    """
-    client = get_openai_client()
+    client = get_groq_client()
     with open(file_path, "rb") as audio_file:
         transcript = client.audio.transcriptions.create(
-            model="whisper-1",
+            model="whisper-large-v3",
             file=audio_file,
             language=language,
+            response_format="text",
         )
-    return transcript.text.strip()
+    # Groq returns a plain string when response_format="text"
+    return (transcript if isinstance(transcript, str) else transcript.text).strip()
 
 
 def score_similarity(transcribed_text: str, target_word: str) -> float:
-    """
-    Compare transcribed text to the target word using difflib's
-    SequenceMatcher, returning a percentage (0-100).
-    """
     ratio = difflib.SequenceMatcher(None, transcribed_text, target_word).ratio()
     return round(ratio * 100, 1)
 
 
 def generate_feedback(score: float) -> str:
-    """Basic heuristic feedback based on score thresholds."""
     if score >= PERFECT_THRESHOLD:
         return "Perfect! 🎉"
     if score >= PASS_THRESHOLD:
@@ -75,11 +58,9 @@ def generate_feedback(score: float) -> str:
 
 
 def score_pronunciation(file_path: str, target_word: str) -> dict:
-    """Run the full pipeline: transcribe -> score -> feedback."""
     transcribed_text = transcribe_audio(file_path)
     score = score_similarity(transcribed_text, target_word)
     feedback = generate_feedback(score)
-
     return {
         "target_word": target_word,
         "transcribed_text": transcribed_text,

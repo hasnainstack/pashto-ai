@@ -22,7 +22,6 @@ export default function ResultsScreen({ result, total, onPracticeAgain, onReview
   return (
     <div className="max-w-lg mx-auto flex flex-col gap-5 fade-up">
       <div className="glass-card rounded-3xl p-8 flex flex-col gap-5 text-center">
-        <div className="text-5xl">🎉</div>
         <h2 className="text-3xl font-bold text-white">PRACTICE COMPLETE!</h2>
 
         <p className="text-slate-300 text-xl font-semibold">
@@ -43,7 +42,7 @@ export default function ResultsScreen({ result, total, onPracticeAgain, onReview
         <p className="text-yellow-400 text-xl font-bold">+{result.xpEarned} XP</p>
 
         {streakMaintained && (
-          <p className="text-orange-400 font-semibold">🔥 Streak maintained!</p>
+          <p className="text-orange-400 font-semibold">Streak maintained!</p>
         )}
 
         {/* Stats grid */}

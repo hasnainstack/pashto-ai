@@ -13,7 +13,6 @@ interface Props {
 
 const MODES: {
   id: GameMode;
-  icon: string;
   name: string;
   desc: string;
   difficulty: string;
@@ -22,7 +21,6 @@ const MODES: {
 }[] = [
   {
     id: "quick-quiz",
-    icon: "🧠",
     name: "Quick Quiz",
     desc: "Choose the correct meaning",
     difficulty: "Easy",
@@ -31,7 +29,6 @@ const MODES: {
   },
   {
     id: "type-answer",
-    icon: "✍️",
     name: "Type the Answer",
     desc: "Recall the Pashto word yourself",
     difficulty: "Medium",
@@ -40,7 +37,6 @@ const MODES: {
   },
   {
     id: "listening",
-    icon: "🎧",
     name: "Listening Challenge",
     desc: "Listen and identify the word",
     difficulty: "Medium",
@@ -49,7 +45,6 @@ const MODES: {
   },
   {
     id: "match",
-    icon: "🔗",
     name: "Match Words",
     desc: "Match Pashto words with their meanings",
     difficulty: "Medium",
@@ -58,7 +53,6 @@ const MODES: {
   },
   {
     id: "speed",
-    icon: "⚡",
     name: "Speed Round",
     desc: "Answer as many as possible in 60 seconds",
     difficulty: "Hard",
@@ -91,10 +85,10 @@ export default function PracticeDashboard({ onStart }: Props) {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard icon="🔥" label="Streak" value={String(streak)} accent="text-orange-400" />
-        <StatCard icon="⭐" label="XP" value={String(xp)} accent="text-yellow-400" />
-        <StatCard icon="🏅" label="Level" value={String(level)} accent="text-brand-400" />
-        <StatCard icon="📚" label="Words" value={String(learnedCount)} accent="text-blue-400" />
+        <StatCard label="Streak" value={String(streak)} accent="text-orange-400" />
+        <StatCard label="XP" value={String(xp)} accent="text-yellow-400" />
+        <StatCard label="Level" value={String(level)} accent="text-brand-400" />
+        <StatCard label="Words" value={String(learnedCount)} accent="text-blue-400" />
       </div>
 
       <div className="glass-card rounded-2xl p-4">
@@ -111,38 +105,48 @@ export default function PracticeDashboard({ onStart }: Props) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {MODES.map((m) => (
-          <div
-            key={m.id}
-            className={`glass-card rounded-2xl p-5 border bg-gradient-to-br ${m.color} flex flex-col gap-3 glass-card-hover`}
-          >
-            <div className="flex items-start justify-between">
-              <span className="text-3xl">{m.icon}</span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-slate-300">
-                {m.difficulty}
-              </span>
+        {MODES.map((m) => {
+          const comingSoon = m.id === "listening";
+          return (
+            <div
+              key={m.id}
+              className={`glass-card rounded-2xl p-5 border bg-gradient-to-br ${m.color} flex flex-col gap-3 ${comingSoon ? "opacity-60" : "glass-card-hover"}`}
+            >
+              <div className="flex items-start justify-between">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-slate-300">
+                  {m.difficulty}
+                </span>
+                {comingSoon && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                    Coming Soon
+                  </span>
+                )}
+              </div>
+              <div>
+                <h3 className="text-white font-bold text-base">{m.name}</h3>
+                <p className="text-slate-400 text-sm mt-0.5">{m.desc}</p>
+              </div>
+              <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/10">
+                <span className="text-brand-400 text-xs font-semibold">{m.xp}</span>
+                <button
+                  onClick={() => !comingSoon && onStart(m.id)}
+                  disabled={comingSoon}
+                  className="btn-primary text-sm px-5 py-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {comingSoon ? "Locked" : "Start →"}
+                </button>
+              </div>
             </div>
-            <div>
-              <h3 className="text-white font-bold text-base">{m.name}</h3>
-              <p className="text-slate-400 text-sm mt-0.5">{m.desc}</p>
-            </div>
-            <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/10">
-              <span className="text-brand-400 text-xs font-semibold">{m.xp}</span>
-              <button onClick={() => onStart(m.id)} className="btn-primary text-sm px-5 py-2">
-                Start →
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 }
 
-function StatCard({ icon, label, value, accent }: { icon: string; label: string; value: string; accent: string }) {
+function StatCard({ label, value, accent }: { label: string; value: string; accent: string }) {
   return (
     <div className="glass-card rounded-2xl p-4 text-center">
-      <div className="text-xl mb-1">{icon}</div>
       <div className={`text-2xl font-bold ${accent}`}>{value}</div>
       <div className="text-xs text-slate-500 mt-0.5">{label}</div>
     </div>
