@@ -5,6 +5,8 @@ import { getPracticePool } from "@/lib/practice";
 import { VocabWord } from "@/lib/vocabulary";
 import { addXP, recordMistake, recordPracticed, clearMistake } from "@/lib/xp";
 import { incrementStreak } from "@/lib/streak";
+import { transliterateToPashto } from "@/lib/pashtoTransliteration";
+import PashtoKeyboard from "./PashtoKeyboard";
 
 const TOTAL = 10;
 const XP_PER = 15;
@@ -35,6 +37,7 @@ export default function TypeAnswer({ onComplete, onBack }: Props) {
   const [xpEarned, setXpEarned] = useState(0);
   const [mistakes, setMistakes] = useState<string[]>([]);
   const [showXP, setShowXP] = useState(false);
+  const [showPashtoKeyboard, setShowPashtoKeyboard] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -81,6 +84,39 @@ export default function TypeAnswer({ onComplete, onBack }: Props) {
     }
   }
 
+  function updateInput(value: string, cursor: number) {
+    setInput(value);
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      inputRef.current?.setSelectionRange(cursor, cursor);
+    });
+  }
+
+  function insertCharacter(character: string) {
+    if (submitted) return;
+
+    const start = inputRef.current?.selectionStart ?? input.length;
+    const end = inputRef.current?.selectionEnd ?? input.length;
+    const nextValue = `${input.slice(0, start)}${character}${input.slice(end)}`;
+    updateInput(nextValue, start + character.length);
+  }
+
+  function backspaceCharacter() {
+    if (submitted) return;
+
+    const start = inputRef.current?.selectionStart ?? input.length;
+    const end = inputRef.current?.selectionEnd ?? input.length;
+    if (start === 0 && end === 0) return;
+
+    const deleteStart = start === end ? start - 1 : start;
+    const nextValue = `${input.slice(0, deleteStart)}${input.slice(end)}`;
+    updateInput(nextValue, deleteStart);
+  }
+
+  function clearInput() {
+    if (!submitted) updateInput("", 0);
+  }
+
   return (
     <div className="max-w-lg mx-auto flex flex-col gap-5 fade-up">
       <div className="flex items-center justify-between">
@@ -115,7 +151,7 @@ export default function TypeAnswer({ onComplete, onBack }: Props) {
           ref={inputRef}
           type="text"
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => setInput(transliterateToPashto(e.target.value))}
           onKeyDown={(e) => e.key === "Enter" && !submitted && handleCheck()}
           disabled={submitted}
           dir="rtl"
@@ -124,6 +160,34 @@ export default function TypeAnswer({ onComplete, onBack }: Props) {
           className="w-full bg-white/5 border border-white/15 rounded-2xl px-4 py-3 text-white text-xl text-right placeholder:text-slate-600 focus:outline-none focus:border-purple-500/60 transition-colors"
           style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}
         />
+
+        <p className="-mt-2 text-center text-xs text-slate-500">
+          Latin letters are converted to Pashto as you type.
+        </p>
+
+        {!submitted && (
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={() => setShowPashtoKeyboard((show) => !show)}
+              className="self-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200 transition-colors hover:border-purple-400/50 hover:bg-purple-500/10"
+              aria-expanded={showPashtoKeyboard}
+              aria-controls="pashto-keyboard"
+            >
+              Pashto Keyboard {showPashtoKeyboard ? "Hide" : "Show"}
+            </button>
+
+            {showPashtoKeyboard && (
+              <div id="pashto-keyboard">
+                <PashtoKeyboard
+                  onInput={insertCharacter}
+                  onBackspace={backspaceCharacter}
+                  onClear={clearInput}
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         {submitted && (
           <div className={`rounded-2xl p-3 text-center text-sm font-semibold ${isCorrect ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>

@@ -226,6 +226,7 @@ export default function HomePage() {
                 <VocabInput />
               </div>
 
+              {/*
               <div className="glass-card rounded-2xl p-5">
                 <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">
                   Generate words with AI
@@ -254,6 +255,7 @@ export default function HomePage() {
                   </p>
                 )}
               </div>
+              */}
             </div>
           ) : section === "translate" ? (
             <TranslatorPage />
