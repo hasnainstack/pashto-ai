@@ -1,4 +1,4 @@
-# PashtoPro
+# PashtoPro /  ژبه
 
 A gamified, AI-powered language learning app for low-resource languages, starting with Pashto. Phase 1 (this MVP) implements flashcards, streak gamification, and AI pronunciation scoring, per `ARCHITECTURE.md`.
 
