@@ -1,97 +1,206 @@
-# PashtoPro - System Architecture
+# Architecture — ژبه
 
-## 1. Project Overview
+## 1. Overview
 
-PashtoPro is a gamified, AI-powered language learning application designed specifically for low-resource languages (starting with Pashto). It combines full-stack web development with applied AI to create an interactive pronunciation scoring engine and conversational voice agent.
-
-**Current Phase:** Phase 1 (MVP) - Flashcards, Streak Gamification, and AI Pronunciation Scoring.
-
-## 2. High-Level System Architecture
-
-The system uses a decoupled architecture, separating the Next.js frontend from the Python/AI backend. This allows for independent scaling and clean separation of concerns between UI rendering and heavy AI processing.
+ژبه is a client-rendered Next.js app backed by a single FastAPI service. All AI features run through one Groq API key — no OpenAI, no Gemini, no local models.
 
 ```
-Client (Next.js 14)
-  UI Components <-> Audio Blob / Score <-> API Client
-  UI Components <-> Read/Write <-> LocalStorage (Streak State)
-
-Server (FastAPI)
-  API Router -> Pronunciation Engine
-  Pronunciation Engine -> Audio File -> OpenAI Whisper API
-  Pronunciation Engine -> String Comparison -> Python difflib
-
-Client <-> POST /api/score-pronunciation (multipart/form-data) <-> Server
+Browser (Next.js 14)
+    │
+    │  REST (JSON / multipart)
+    ▼
+FastAPI (Python 3.10+)
+    │
+    ├── Groq whisper-large-v3   ← audio transcription (ASR)
+    └── Groq qwen/qwen3.6-27b  ← text generation, translation, transliteration
 ```
 
-## 3. Tech Stack
+---
 
-### Frontend
-- Framework: Next.js 14 (App Router) with TypeScript.
-- Styling: Tailwind CSS.
-- State Management: React Hooks (`useState`, `useEffect`) + browser `localStorage` for streak persistence.
-- Media Handling: Native `MediaRecorder` API for browser-based audio capture.
+## 2. Frontend
 
-### Backend
-- Framework: FastAPI (Python).
-- Server: Uvicorn (ASGI).
-- Data Validation: Pydantic for strict response schemas.
-- File Handling: `python-multipart` for processing `UploadFile` and `Form` data.
+**Stack:** Next.js 14 (App Router), TypeScript, Tailwind CSS
 
-### AI & Data
-- Speech-to-Text (STT): OpenAI Whisper API (`whisper-1` model, explicitly configured with `language="ps"` for Pashto).
-- Pronunciation Scoring Algorithm: Python's built-in `difflib.SequenceMatcher` to calculate the similarity ratio between the target text and the transcribed text.
+### Routing
 
-## 4. Core Components: Phase 1 (Pronunciation Engine)
+The app uses a single page (`app/page.tsx`) with client-side section switching — not file-based Next.js routing. The active section is held in React state.
 
-The Phase 1 MVP focuses on evaluating user pronunciation through a mathematical comparison pipeline.
+```
+Section state: "learn" | "practice" | "translate" | "pashto-to-english"
+```
 
-### 4.1. Frontend Audio Capture
-- The UI prompts the user for microphone access via `navigator.mediaDevices.getUserMedia({ audio: true })`.
-- Audio is recorded using the `MediaRecorder` API and stored as a `Blob` in memory.
-- The `Blob` is appended to a `FormData` object along with the `target_word` string and sent via a POST request to the backend.
+### Component tree
 
-### 4.2. Backend Pronunciation Pipeline
-The `/api/score-pronunciation` endpoint orchestrates the AI scoring logic:
+```
+page.tsx  (layout, header, sidebar, section state)
+├── Flashcard.tsx               — learn section
+├── VocabInput.tsx              — search + AI fallback (embedded in learn)
+├── PracticePage.tsx            — practice section shell
+│   ├── PracticeDashboard.tsx   — mode selection
+│   ├── QuickQuiz.tsx
+│   ├── TypeAnswer.tsx
+│   ├── ListeningChallenge.tsx  (coming soon — locked)
+│   ├── MatchGame.tsx
+│   ├── SpeedRound.tsx
+│   ├── ResultsScreen.tsx
+│   └── MistakeReview.tsx
+├── TranslatorPage.tsx          — Roman → Pashto section
+└── PashtoToEnglishPage.tsx     — Pashto → English section
+```
 
-1. **File Ingestion:** FastAPI receives the audio file as an `UploadFile` and the target word as a `Form` string.
-2. **STT Transcription:**
-   - The audio file is temporarily saved to disk.
-   - The file is sent to the OpenAI Whisper API.
-   - Constraint Handling: The API is forced to use Pashto context (`language="ps"`) to improve transcription accuracy for a low-resource language.
-   - The transcribed text is cleaned (whitespace stripped).
-3. **Similarity Scoring:**
-   - Uses `difflib.SequenceMatcher(None, transcribed_text, target_word).ratio()`.
-   - Returns a float between 0.0 and 1.0, multiplied by 100 to generate a percentage score.
-4. **Feedback Generation:** Basic heuristic logic generates feedback based on the score threshold (e.g., <70% = "Try again", >90% = "Perfect").
-5. **Cleanup:** The temporary audio file is deleted from the server to prevent storage bloat.
+### Client-side state & persistence
 
-### 4.3. Gamification Logic
-- **Streak Counter:** Handled entirely on the frontend.
-- If the backend returns a score >= 80, the frontend increments the streak state and saves it to `localStorage`.
-- A 2-second delay is triggered before loading the next vocabulary word, allowing the user to see their score.
+All user data lives in `localStorage` — no auth, no database.
 
-## 5. Future Architecture: Phase 2 (Vapi Voice AI Integration)
+| Key | Module | Contents |
+|---|---|---|
+| `pashtopro_xp` | `lib/xp.ts` | Total XP (integer) |
+| `pashtopro_learned` | `lib/xp.ts` | Array of learned word IDs |
+| `pashtopro_mistakes` | `lib/xp.ts` | Array of word IDs answered incorrectly |
+| `pashtopro_practice_history` | `lib/xp.ts` | Map of `wordId → lastPracticedTimestamp` |
+| `pashtopro_streak` | `lib/streak.ts` | Current streak (integer) |
+| `pashtopro_best_streak` | `lib/streak.ts` | Best streak ever (integer) |
+| `pp_daily` | `page.tsx` (sessionStorage) | Words seen this session |
 
-In Phase 2, the app will expand from isolated word pronunciation to full conversational practice using Vapi.
+### Vocabulary
 
-### 5.1. Architecture Changes
-- **Pipeline Split:** The app will separate the Flashcard Grader (Phase 1) from the Conversational Agent (Phase 2).
-- **Webhooks:** Next.js will expose API routes to receive Vapi webhooks (e.g., `call-started`, `call-ended`, `function-call`).
+`lib/vocabulary.ts` exports 720 words, each with:
+```ts
+{ id: string; pashto: string; transliteration: string; english: string }
+```
 
-### 5.2. Vapi Configuration for Low-Resource Languages
-Configuring Vapi for Pashto requires overriding default English-centric models:
-- **STT:** Deepgram Nova-2 or Whisper-1 (configured with Pashto language code).
-- **LLM:** GPT-4o-mini or Gemini 1.5 Flash (requires heavy system-prompting to enforce Pashto-only responses).
-- **TTS:** Routed to Azure Cognitive Services or Google Cloud TTS, as default Vapi TTS providers lack robust Pashto neural voices.
+### Practice question generation (`lib/practice.ts`)
 
-### 5.3. Agentic Function Calling
-- The Vapi agent will be equipped with a tool: `award_xp(amount: int)`.
-- When the user successfully uses a vocabulary word in conversation, the LLM triggers the function call.
-- Vapi sends the webhook to the Next.js backend, updating the user's streak/XP in real-time during the active phone call.
+`getPracticePool(count)` builds a prioritised word pool:
+1. Mistakes first
+2. Least-recently-practiced next
+3. Shuffled remainder
 
-## 6. Deployment Strategy
-- **Frontend:** Deployed on Vercel. Environment variables configured for the backend API URL.
-- **Backend:** Deployed on Render or Railway (Python Docker container).
-- **Environment Variables:**
-  - `OPENAI_API_KEY`: Stored securely on the backend server.
-- **CORS Policy:** Backend is configured to accept requests only from the specific Vercel frontend domain in production.
+`generateQuizQuestions(count)` wraps the pool into multiple-choice questions with 3 random distractors per word.
+
+### API client (`lib/api.ts`)
+
+All backend calls go through `NEXT_PUBLIC_API_URL` (default `http://localhost:8000`).
+
+| Function | Endpoint |
+|---|---|
+| `scorePronunciation(blob, word)` | `POST /api/score-pronunciation` |
+| `transcribeAudio(blob)` | `POST /api/transcribe` |
+| `transliterateRoman(text)` | `POST /api/transliterate` |
+| `translateToEnglish(text)` | `POST /api/translate-to-english` |
+
+---
+
+## 3. Backend
+
+**Stack:** FastAPI, Python 3.10+, Groq SDK, Pydantic v2, python-dotenv
+
+### File structure
+
+```
+backend/
+├── main.py                  — FastAPI app, routes, CORS, startup hook
+├── pronunciation_engine.py  — Whisper transcription + difflib scoring
+├── schemas.py               — Pydantic request/response models
+├── requirements.txt
+└── services/
+    ├── groq_vocab.py        — AI vocabulary generation
+    ├── transliterate.py     — Roman→Pashto and Pashto→English
+    └── pashto_asr.py        — Groq Whisper wrapper (transcribe_audio)
+```
+
+### Routes
+
+```
+GET  /                          → health check (whisper_configured flag)
+GET  /api/vocabulary/generate   → generate vocab for a topic
+POST /api/transliterate         → Roman Pashto → Pashto script
+POST /api/translate-to-english  → Pashto (any form) → English
+POST /api/transcribe            → audio file → Pashto text
+POST /api/score-pronunciation   → audio + target word → score + feedback
+```
+
+### Pronunciation scoring (`pronunciation_engine.py`)
+
+1. Audio uploaded as `multipart/form-data` (max 10 MB)
+2. Saved to a temp file, transcribed via Groq `whisper-large-v3` (`language="ps"`)
+3. Similarity scored with `difflib.SequenceMatcher` → 0–100
+4. Feedback generated by threshold:
+   - ≥ 90 → "Perfect!"
+   - ≥ 80 → "Great job!"
+   - ≥ 70 → "Close! Try again."
+   - < 70 → "Try again — listen closely."
+5. Temp file deleted in `finally` block
+
+Pass threshold: **80**.
+
+### AI text generation (`services/groq_vocab.py`, `services/transliterate.py`)
+
+All text generation uses `qwen/qwen3.6-27b` with:
+- `reasoning_effort="none"` — suppresses `<think>` blocks
+- No `response_format={"type":"json_object"}` — causes empty `failed_generation` on this model
+- Manual JSON extraction with `<think>` stripping and markdown fence removal
+
+### CORS
+
+Configured via `ALLOWED_ORIGINS` env var (comma-separated). Defaults to `http://localhost:3000`.
+
+---
+
+## 4. AI models in use
+
+| Model | Provider | Used for |
+|---|---|---|
+| `whisper-large-v3` | Groq | Pashto speech-to-text (ASR) |
+| `qwen/qwen3.6-27b` | Groq | Vocab generation, transliteration, translation |
+
+Single API key: `GROQ_API_KEY`.
+
+---
+
+## 5. Data flow examples
+
+### Flashcard → Learn
+```
+User clicks "Next word"
+→ markLearned([word.id])          (localStorage)
+→ wordIndex++                     (React state)
+→ sessionStorage pp_daily++
+```
+
+### Practice session
+```
+User starts Quick Quiz
+→ getPracticePool(10)             (mistakes first, then LRU)
+→ generateQuizQuestions(10)       (3 random distractors each)
+→ User answers → addXP(10) / recordMistake(id)
+→ ResultsScreen → streak update
+```
+
+### Pronunciation scoring
+```
+User records audio (MediaRecorder → webm Blob)
+→ POST /api/score-pronunciation (multipart)
+→ Groq whisper-large-v3 transcribes (language="ps")
+→ difflib.SequenceMatcher scores vs target_word
+→ { score, feedback, passed } returned to frontend
+→ if passed: incrementStreak(), addXP()
+```
+
+### Roman → Pashto translation
+```
+User types Roman text → Ctrl+Enter
+→ POST /api/transliterate { text }
+→ Groq qwen/qwen3.6-27b with system prompt
+→ Returns Pashto script only
+→ Displayed in Noto Nastaliq Urdu font, dir="rtl"
+```
+
+---
+
+## 6. Roadmap
+
+- **Listening Challenge** — audio playback + identify-the-word game mode (currently locked as "Coming Soon")
+- **Real-time voice practice** — conversational Pashto practice with function-calling XP rewards (Vapi or similar)
+- **Spaced repetition** — replace LRU practice pool with SM-2 algorithm
+- **User accounts** — sync progress across devices
